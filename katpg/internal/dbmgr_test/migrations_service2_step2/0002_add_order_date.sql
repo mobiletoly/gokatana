@@ -1,0 +1,2 @@
+ALTER TABLE service2_sample.orders
+    ADD COLUMN order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
