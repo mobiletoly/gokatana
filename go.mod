@@ -3,6 +3,7 @@ module github.com/mobiletoly/gokatana
 go 1.24
 
 require (
+	github.com/go-chi/chi/v5 v5.2.1
 	github.com/hashicorp/go-retryablehttp v0.7.7
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/labstack/echo/v4 v4.13.3
@@ -13,10 +14,11 @@ require (
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0
 	github.com/vmihailenco/go-tinylfu v0.2.2
-	golang.org/x/net v0.39.0
+	golang.org/x/net v0.40.0
 )
 
 require (
+	github.com/go-chi/cors v1.2.1
 	github.com/go-viper/mapstructure/v2 v2.2.1
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/redis/go-redis/v9 v9.8.0
@@ -90,10 +92,11 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

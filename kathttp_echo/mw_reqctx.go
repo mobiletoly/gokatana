@@ -1,4 +1,4 @@
-package kathttp
+package kathttp_echo
 
 import (
 	"github.com/labstack/echo/v4"

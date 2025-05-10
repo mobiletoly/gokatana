@@ -1,4 +1,4 @@
-package kathttp
+package kathttp_echo
 
 import (
 	"compress/gzip"
@@ -14,8 +14,7 @@ func gzipDecompressMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		if c.Request().Header.Get("content-encoding") == "gzip" {
 			gz, err := gzip.NewReader(c.Request().Body)
 			if err != nil {
-				return GuessHTTPError(c.Request().Context(),
-					katapp.NewErr(katapp.ErrInvalidInput, "cannot decompress gzip payload"))
+				return ReportHTTPError(katapp.NewErr(katapp.ErrInvalidInput, "cannot decompress gzip payload"))
 			}
 			defer gz.Close()
 			// Replace the request body with the decompressed data

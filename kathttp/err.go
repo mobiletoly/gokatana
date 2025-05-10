@@ -1,12 +1,9 @@
 package kathttp
 
 import (
-	"context"
 	"errors"
 	"github.com/mobiletoly/gokatana/katapp"
 	"net/http"
-
-	"github.com/labstack/echo/v4"
 )
 
 // ErrResponse renderer for HTTP failed response
@@ -76,24 +73,28 @@ func NewUnauthorizedErrResponse(err error) *ErrResponse {
 	}
 }
 
-func GuessHTTPError(ctx context.Context, err error) *echo.HTTPError {
+func GuessHTTPError(err error) *ErrResponse {
 	var appErr *katapp.Err
+	var errResp *ErrResponse
 	if errors.As(err, &appErr) {
 		switch appErr.Scope {
 		case katapp.ErrUnknown, katapp.ErrInternal:
-			return echo.NewHTTPError(http.StatusInternalServerError, NewInternalServerErrResponse(err))
+			errResp = NewInternalServerErrResponse(err)
 		case katapp.ErrInvalidInput:
-			return echo.NewHTTPError(http.StatusBadRequest, NewBadRequestErrResponse(err))
+			errResp = NewBadRequestErrResponse(err)
 		case katapp.ErrNotFound:
-			return echo.NewHTTPError(http.StatusNotFound, NewNotFoundErrResponse(err))
+			errResp = NewNotFoundErrResponse(err)
 		case katapp.ErrDuplicate:
-			return echo.NewHTTPError(http.StatusConflict, NewConflictErrResponse(err))
+			errResp = NewConflictErrResponse(err)
 		case katapp.ErrFailedExternalService:
-			return echo.NewHTTPError(http.StatusBadGateway, NewBadGatewayErrResponse(err))
+			errResp = NewBadGatewayErrResponse(err)
 		case katapp.ErrUnauthorized:
-			return echo.NewHTTPError(http.StatusUnauthorized, NewUnauthorizedErrResponse(err))
+			errResp = NewUnauthorizedErrResponse(err)
+		default:
+			errResp = NewInternalServerErrResponse(err)
 		}
+	} else {
+		errResp = NewInternalServerErrResponse(err)
 	}
-	katapp.Logger(ctx).ErrorContext(ctx, "Unhandled application error", "cause", err)
-	return echo.NewHTTPError(http.StatusInternalServerError, NewInternalServerErrResponse(err))
+	return errResp
 }
