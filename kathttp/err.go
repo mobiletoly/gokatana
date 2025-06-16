@@ -73,6 +73,15 @@ func NewUnauthorizedErrResponse(err error) *ErrResponse {
 	}
 }
 
+func NewForbiddenErrResponse(err error) *ErrResponse {
+	return &ErrResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusForbidden,
+		StatusText:     "Forbidden",
+		ErrorText:      err.Error(),
+	}
+}
+
 func GuessHTTPError(err error) *ErrResponse {
 	var appErr *katapp.Err
 	var errResp *ErrResponse
