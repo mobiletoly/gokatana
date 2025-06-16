@@ -3,6 +3,7 @@ package katsqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/mobiletoly/gokatana/internal"
 	"github.com/mobiletoly/gokatana/katapp"
@@ -135,7 +136,7 @@ LIMIT 1
 
 	var record migrationRecord
 	err := row.Scan(&record.Service, &record.UpdatedAt, &record.LatestVersion)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
