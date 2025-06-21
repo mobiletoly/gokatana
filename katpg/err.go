@@ -7,7 +7,7 @@ import (
 	"github.com/mobiletoly/gokatana/katapp"
 )
 
-func ToAppError(err error, title string) *katapp.Err {
+func PgToAppError(err error, title string) *katapp.Err {
 	if IsNoRows(err) {
 		return katapp.NewErr(katapp.ErrNotFound, title+": not found")
 	}
