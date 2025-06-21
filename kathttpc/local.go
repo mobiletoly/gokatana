@@ -37,6 +37,22 @@ func LocalHttpJsonPostRequest[TReqBody any, TRespBody any](
 	return &resp.Body, resp.Response.Header, nil
 }
 
+func LocalHttpJsonPutRequest[TReqBody any, TRespBody any](
+	ctx context.Context, cfg *katapp.ServerConfig, path string, headers http.Header, reqBody *TReqBody,
+) (*TRespBody, http.Header, error) {
+	resp, err := DoJsonPutRequest[TReqBody, TRespBody, any](
+		ctx, http.DefaultClient, "PUT", LocalURL(cfg.Port, path), JsonRequest[TReqBody]{
+			ExpectSuccessStatusOnly: true,
+			Body:                    reqBody,
+			Headers:                 headers,
+		},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return &resp.Body, resp.Response.Header, nil
+}
+
 func LocalHttpJsonDeleteRequest[TRespBody any](
 	ctx context.Context, cfg *katapp.ServerConfig, path string, headers http.Header,
 ) (*TRespBody, http.Header, error) {
