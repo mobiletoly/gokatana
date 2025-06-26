@@ -10,6 +10,7 @@ const (
 	ErrDuplicate
 	ErrFailedExternalService
 	ErrUnauthorized
+	ErrNoPermissions
 )
 
 type Err struct {

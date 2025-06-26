@@ -99,6 +99,8 @@ func GuessHTTPError(err error) *ErrResponse {
 			errResp = NewBadGatewayErrResponse(err)
 		case katapp.ErrUnauthorized:
 			errResp = NewUnauthorizedErrResponse(err)
+		case katapp.ErrNoPermissions:
+			errResp = NewForbiddenErrResponse(err)
 		default:
 			errResp = NewInternalServerErrResponse(err)
 		}
