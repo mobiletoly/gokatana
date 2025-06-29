@@ -30,6 +30,8 @@ type DatabaseConfig struct {
 	ConnectTimeout int
 	// Migrations is a list of database migrations to be performed when database is connected
 	Migrations []DatabaseMigrationConfig
+	// Parameters provides additional connection parameters
+	Parameters map[string]string
 }
 
 // DatabaseMigrationConfig represents a database migration configuration

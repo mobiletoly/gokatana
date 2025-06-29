@@ -31,8 +31,15 @@ func Connect(ctx context.Context, cfg *katapp.DatabaseConfig) (*DBLink, error) {
 	escapedUser := url.QueryEscape(cfg.User)
 	escapedPassword := url.QueryEscape(cfg.Password)
 	escapedName := url.QueryEscape(cfg.Name)
-	URL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d",
-		escapedUser, escapedPassword, cfg.Host, cfg.Port, escapedName, cfg.Sslmode, cfg.ConnectTimeout)
+
+	parameters := url.Values{}
+	for k, v := range cfg.Parameters {
+		parameters.Add(k, v)
+	}
+
+	URL := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&connect_timeout=%d&%s",
+		escapedUser, escapedPassword, cfg.Host, cfg.Port, escapedName, cfg.Sslmode, cfg.ConnectTimeout,
+		parameters.Encode())
 
 	logger.Infof("establishing connection to database "+
 		"postgres://%s:<password>@%s:%d/%s?sslmode=%s&connect_timeout=%d",
