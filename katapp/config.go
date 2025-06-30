@@ -9,6 +9,8 @@ type ServerConfig struct {
 	RequestDecompression string
 	// ResponseCompression is a type of compression to be used on outgoing responses (e.g. "gzip")
 	ResponseCompression string
+	// Domain
+	Domain string
 }
 
 type DatabaseConfig struct {
