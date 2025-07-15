@@ -28,7 +28,12 @@ type PostgresTestContainer struct {
 
 // RunPostgresTestContainer starts a postgres Container for testing and register
 // a cleanup function to terminate the Container after the test is complete.
-func RunPostgresTestContainer(ctx context.Context, t *testing.T, migrateDir *string, scripts []string) *PostgresTestContainer {
+func RunPostgresTestContainer(
+	ctx context.Context,
+	t *testing.T,
+	migrateDirs []string,
+	scripts []string,
+) *PostgresTestContainer {
 
 	defaultLogger := log.New(os.Stderr, "", log.LstdFlags)
 
@@ -49,10 +54,10 @@ func RunPostgresTestContainer(ctx context.Context, t *testing.T, migrateDir *str
 				WithStartupTimeout(5 * time.Second)),
 	}
 
-	if migrateDir != nil {
-		files, err := internal.ListFilesInDirSortedByFilename(*migrateDir)
+	for _, migrateDir := range migrateDirs {
+		files, err := internal.ListFilesInDirSortedByFilename(migrateDir)
 		if err != nil {
-			t.Fatalf("failed to list files in directory %s: %v", *migrateDir, err)
+			t.Fatalf("failed to list files in directory %s: %v", migrateDir, err)
 		}
 		if len(files) > 0 {
 			customizer = append(customizer, postgres.WithInitScripts(files...))

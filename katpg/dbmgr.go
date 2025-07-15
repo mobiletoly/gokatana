@@ -14,7 +14,7 @@ import (
 
 const migrationTable = "_kat_migration"
 
-var validMigrationFilePattern = regexp.MustCompile(`^\d{4}_.+\.sql$`)
+var validMigrationFilePattern = regexp.MustCompile(`^(?:[A-Za-z]+_)?\d{4}_.+\.sql$`)
 
 type migrationRecord struct {
 	Service       string    `db:"service"`

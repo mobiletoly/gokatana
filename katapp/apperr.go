@@ -11,6 +11,7 @@ const (
 	ErrFailedExternalService
 	ErrUnauthorized
 	ErrNoPermissions
+	ErrConflict
 )
 
 type Err struct {
