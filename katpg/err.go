@@ -16,6 +16,8 @@ func PgToAppError(err error, title string) *katapp.Err {
 		switch pgerr.Code {
 		case "23505":
 			return katapp.NewErr(katapp.ErrDuplicate, title+": duplicate data")
+		case "23503":
+			return katapp.NewErr(katapp.ErrNotFound, title+": referenced record not found")
 		}
 	}
 	return katapp.NewErr(katapp.ErrInternal, title+": unknown error")
