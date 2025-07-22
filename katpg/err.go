@@ -1,6 +1,7 @@
 package katpg
 
 import (
+	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,6 +22,11 @@ func PgToAppError(err error, title string) *katapp.Err {
 		}
 	}
 	return katapp.NewErr(katapp.ErrInternal, title+": unknown error")
+}
+
+func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.Err {
+	katapp.Logger(ctx).Error("katpg.LoggedPgToAppError", "title", title, "error", err)
+	return PgToAppError(err, title)
 }
 
 func IsNoRows(err error) bool {
