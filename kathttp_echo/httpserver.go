@@ -20,7 +20,14 @@ func Start(
 	inTest := katapp.RunningInTest(ctx)
 
 	e := echo.New()
-	e.Use(middleware.Recover())
+	e.Use(middleware.RecoverWithConfig(middleware.RecoverConfig{
+		DisableStackAll:   false,
+		DisablePrintStack: false,
+		LogErrorFunc: func(c echo.Context, err error, stack []byte) error {
+			katapp.Logger(c.Request().Context()).Errorf("[PANIC RECOVER] err=%v\nstack=%s", err, stack)
+			return err
+		},
+	}))
 	e.Use(middleware.CORS())
 	e.Use(middleware.RequestID())
 	if cfg.ResponseCompression == "gzip" {
