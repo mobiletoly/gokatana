@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-retryablehttp"
-	"github.com/mobiletoly/gokatana/katapp"
 	"io"
 	"log/slog"
 	"maps"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
+	"github.com/mobiletoly/gokatana/katapp"
 )
 
 type UnexpectedStatusCodeError struct {
@@ -123,12 +124,26 @@ func DoJsonRequest[TReqBody any, TRespBody any, TRespErr any](
 ) (*JsonResponse[TRespBody, TRespErr], error) {
 	var body []byte
 	var err error
+
+	// Build request body. If caller provided raw bytes, expect req.Body to be *([]byte)
 	if req.Body != nil {
-		body, err = json.Marshal(req.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+		switch b := any(req.Body).(type) {
+		case *[]byte:
+			if b != nil {
+				body = *b
+			}
+		case []byte: // in case someone passes a non-pointer despite the type
+			body = b
+		default:
+			if req.Body != nil {
+				body, err = json.Marshal(req.Body)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal request body: %w", err)
+				}
+			}
 		}
 	}
+
 	headers := withJsonHeaders(req.Headers)
 	bodyResp, err := DoBodyRequest(
 		ctx, client, method, reqURL, BodyRequest{
@@ -145,21 +160,32 @@ func DoJsonRequest[TReqBody any, TRespBody any, TRespErr any](
 		IsSuccess: bodyResp.IsSuccess,
 		Response:  bodyResp.Response,
 	}
-	// If no content, return success
+
+	// No content — just return the response meta
 	if len(bodyResp.Body) == 0 {
 		return resp, nil
 	}
+
 	if !bodyResp.IsSuccess {
-		err = json.Unmarshal(bodyResp.Body, &resp.ErrBody)
-		if err != nil {
+		if err := json.Unmarshal(bodyResp.Body, &resp.ErrBody); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal error response: %w", err)
 		}
-	} else {
-		err = json.Unmarshal(bodyResp.Body, &resp.Body)
-		if err != nil {
+		return resp, nil
+	}
+
+	// Success: decode body.
+	// If TRespBody is []byte or string, fill directly; otherwise JSON-unmarshal.
+	switch any(resp.Body).(type) {
+	case []byte:
+		resp.Body = any(bodyResp.Body).(TRespBody) // safe: TRespBody == []byte
+	case string:
+		resp.Body = any(string(bodyResp.Body)).(TRespBody) // safe: TRespBody == string
+	default:
+		if err := json.Unmarshal(bodyResp.Body, &resp.Body); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 	}
+
 	return resp, nil
 }
 
