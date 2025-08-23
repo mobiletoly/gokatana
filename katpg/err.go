@@ -3,6 +3,8 @@ package katpg
 import (
 	"context"
 	"errors"
+	"strings"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/mobiletoly/gokatana/katapp"
@@ -18,7 +20,11 @@ func PgToAppError(err error, title string) *katapp.Err {
 		case "23505":
 			return katapp.NewErr(katapp.ErrDuplicate, title+": duplicate data")
 		case "23503":
-			return katapp.NewErr(katapp.ErrNotFound, title+": referenced record not found")
+			if strings.Contains(pgerr.Message, "update") || strings.Contains(pgerr.Message, "delete") {
+				return katapp.NewErr(katapp.ErrConflict, ": record is in use by other records")
+			} else {
+				return katapp.NewErr(katapp.ErrNotFound, title+": referenced record not found")
+			}
 		}
 	}
 	return katapp.NewErr(katapp.ErrInternal, title+": unknown error")

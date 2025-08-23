@@ -2,8 +2,9 @@ package kathttp
 
 import (
 	"errors"
-	"github.com/mobiletoly/gokatana/katapp"
 	"net/http"
+
+	"github.com/mobiletoly/gokatana/katapp"
 )
 
 // ErrResponse renderer for HTTP failed response
@@ -101,6 +102,8 @@ func GuessHTTPError(err error) *ErrResponse {
 			errResp = NewUnauthorizedErrResponse(err)
 		case katapp.ErrNoPermissions:
 			errResp = NewForbiddenErrResponse(err)
+		case katapp.ErrConflict:
+			errResp = NewConflictErrResponse(err)
 		default:
 			errResp = NewInternalServerErrResponse(err)
 		}
