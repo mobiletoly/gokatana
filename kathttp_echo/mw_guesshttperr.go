@@ -12,7 +12,8 @@ func GuessHTTPErrorMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		if err != nil {
 			ctx := c.Request().Context()
 			err = ReportHTTPError(err)
-			katapp.Logger(ctx).Errorf("HTTP error reported: %v", err)
+			katapp.Logger(ctx).Error("HTTP error reported", "error", err,
+				"URL", c.Request().URL, "method", c.Request().Method)
 			return err
 		}
 		return nil
