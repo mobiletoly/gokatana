@@ -21,17 +21,28 @@ func PgToAppError(err error, title string) *katapp.Err {
 			return katapp.NewErr(katapp.ErrDuplicate, title+": duplicate data")
 		case "23503":
 			if strings.Contains(pgerr.Message, "update") || strings.Contains(pgerr.Message, "delete") {
-				return katapp.NewErr(katapp.ErrConflict, ": record is in use by other records")
+				if strings.Contains(pgerr.Detail, "is not present") {
+					return katapp.NewErr(katapp.ErrNotFound, title+": referenced record not found")
+				} else {
+					return katapp.NewErr(katapp.ErrConflict, ": record is in use by other records")
+				}
 			} else {
 				return katapp.NewErr(katapp.ErrNotFound, title+": referenced record not found")
 			}
+		default:
+			return katapp.NewErr(katapp.ErrInternal, title+": unknown error")
 		}
 	}
 	return katapp.NewErr(katapp.ErrInternal, title+": unknown error")
 }
 
 func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.Err {
-	katapp.Logger(ctx).Error("katpg.LoggedPgToAppError", "title", title, "error", err)
+	var pgerr *pgconn.PgError
+	var details string
+	if errors.As(err, &pgerr) {
+		details = pgerr.Detail
+	}
+	katapp.Logger(ctx).Error("katpg.LoggedPgToAppError", "title", title, "error", err, "details", details)
 	return PgToAppError(err, title)
 }
 
