@@ -3,12 +3,14 @@ package katpg
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/mobiletoly/gokatana/katapp"
 	"log"
 	"net/url"
 	"os"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mobiletoly/gokatana/katapp"
 )
 
 type DBLink struct {
@@ -45,19 +47,36 @@ func Connect(ctx context.Context, cfg *katapp.DatabaseConfig) (*DBLink, error) {
 		"postgres://%s:<password>@%s:%d/%s?sslmode=%s&connect_timeout=%d",
 		escapedUser, cfg.Host, cfg.Port, escapedName, cfg.Sslmode, cfg.ConnectTimeout)
 
-	dbpool, err := pgxpool.New(ctx, URL)
+	pcfg, err := pgxpool.ParseConfig(URL)
+	if err != nil {
+		logger.ErrorContext(ctx, "failed to parse pool config", "error", err)
+		return nil, fmt.Errorf("failed to parse pool config: %w", err)
+	}
+	pcfg.MaxConns = int32(cfg.Pool.MaxConns)
+	pcfg.MinConns = int32(cfg.Pool.MinConns)
+	pcfg.MaxConnIdleTime = cfg.Pool.MaxConnIdleTime
+	pcfg.MaxConnLifetime = cfg.Pool.MaxConnLifetime
+	pcfg.HealthCheckPeriod = cfg.Pool.HealthPeriod
+
+	initCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	pool, err := pgxpool.NewWithConfig(initCtx, pcfg)
 	if err != nil {
 		return nil, fmt.Errorf("error connecting to database: %w", err)
 	}
 
-	err = dbpool.Ping(ctx)
+	pingCtx, pingCancel := context.WithTimeout(initCtx, 4*time.Second)
+	defer pingCancel()
+	err = pool.Ping(pingCtx)
 	if err != nil {
+		pool.Close()
+		pool = nil
 		return nil, logger.LogNewError("error probing database connection: %w", err)
 	}
 
 	logger.Infof("connection to database was successfully established")
 
-	return &DBLink{Pool: dbpool, cfg: cfg}, nil
+	return &DBLink{Pool: pool, cfg: cfg}, nil
 }
 
 func (db *DBLink) Close() {

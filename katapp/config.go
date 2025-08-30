@@ -1,5 +1,7 @@
 package katapp
 
+import "time"
+
 type ServerConfig struct {
 	// Addr is a network address to listen on
 	Addr string
@@ -34,6 +36,7 @@ type DatabaseConfig struct {
 	Migrations []DatabaseMigrationConfig
 	// Parameters provides additional connection parameters
 	Parameters map[string]string
+	Pool       DatabasePool
 }
 
 // DatabaseMigrationConfig represents a database migration configuration
@@ -48,4 +51,12 @@ type DatabaseMigrationConfig struct {
 
 type CacheConfig struct {
 	Type string
+}
+
+type DatabasePool struct {
+	MaxConns        int
+	MinConns        int
+	MaxConnIdleTime time.Duration
+	MaxConnLifetime time.Duration
+	HealthPeriod    time.Duration
 }
