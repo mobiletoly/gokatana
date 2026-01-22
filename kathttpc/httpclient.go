@@ -223,7 +223,8 @@ func withJsonHeaders(headers http.Header) http.Header {
 }
 
 func LocalURL(port int, path string) string {
-	return fmt.Sprintf("http://0.0.0.0:%d/%s", port, strings.TrimPrefix(path, "/"))
+	// 0.0.0.0 is a bind address, not a connect address. Use loopback for local requests.
+	return fmt.Sprintf("http://127.0.0.1:%d/%s", port, strings.TrimPrefix(path, "/"))
 }
 
 func WaitForURLToBecomeReady(ctx context.Context, URL string) {
