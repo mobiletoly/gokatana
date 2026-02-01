@@ -37,6 +37,9 @@ func PgToAppError(err error, title string) *katapp.Err {
 }
 
 func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.Err {
+	if err == nil {
+		return nil
+	}
 	var pgerr *pgconn.PgError
 	var details string
 	if errors.As(err, &pgerr) {
@@ -44,6 +47,17 @@ func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.E
 	}
 	katapp.Logger(ctx).Error("katpg.LoggedPgToAppError", "title", title, "error", err, "details", details)
 	return PgToAppError(err, title)
+}
+
+func PgToAppErrorForMandatoryRows(ctx context.Context, err error, cmd pgconn.CommandTag,
+	entityName string, title string) *katapp.Err {
+	if err == nil {
+		if cmd.RowsAffected() == 0 {
+			return katapp.NewErr(katapp.ErrNotFound, entityName+" not found")
+		}
+		return nil
+	}
+	return PgToAppErrorContext(ctx, err, title)
 }
 
 func IsNoRows(err error) bool {
