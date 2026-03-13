@@ -36,7 +36,7 @@ func PgToAppError(err error, title string) *katapp.Err {
 	return katapp.NewErr(katapp.ErrInternal, title+": unknown error")
 }
 
-func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.Err {
+func PgToAppErrorContext(ctx context.Context, err error, title string) error {
 	if err == nil {
 		return nil
 	}
@@ -50,7 +50,7 @@ func PgToAppErrorContext(ctx context.Context, err error, title string) *katapp.E
 }
 
 func PgToAppErrorForMandatoryRows(ctx context.Context, err error, cmd pgconn.CommandTag,
-	entityName string, title string) *katapp.Err {
+	entityName string, title string) error {
 	if err == nil {
 		if cmd.RowsAffected() == 0 {
 			return katapp.NewErr(katapp.ErrNotFound, entityName+" not found")
