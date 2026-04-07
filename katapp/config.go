@@ -1,6 +1,9 @@
 package katapp
 
-import "time"
+import (
+	"io/fs"
+	"time"
+)
 
 type ServerConfig struct {
 	// Addr is a network address to listen on
@@ -45,8 +48,13 @@ type DatabaseMigrationConfig struct {
 	Service string
 	// Schema is a name of the database schema where the migration table is stored
 	Schema string
-	// Path is a path to the directory with migration files
+	// Path is a path to the directory with migration files. When FS is nil this
+	// is treated as an OS filesystem path. When FS is provided this path is
+	// resolved inside that filesystem.
 	Path string
+	// FS optionally supplies the migration filesystem. Leave nil to read from the
+	// host OS filesystem.
+	FS fs.FS
 }
 
 type CacheConfig struct {

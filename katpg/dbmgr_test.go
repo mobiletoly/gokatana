@@ -7,6 +7,7 @@ import (
 	"github.com/mobiletoly/gokatana/kattest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -125,4 +126,37 @@ func TestDBLink_DoMigration_MultipleServices_SeparateSchemas(t *testing.T) {
 	runMigration("test_service_2", service2MigrationsStep2, "service2_sample", func(ctx context.Context, dbPool *pgxpool.Pool, t *testing.T) {
 		// Attempt to apply the same migration again should not cause any error
 	})
+}
+
+func TestDoMigration_WithFS_MultipleRuns(t *testing.T) {
+	ctx := kattest.AppTestContext()
+
+	pc := RunPostgresTestContainer(ctx, t, nil, []string{})
+	t.Cleanup(func() {
+		pc.Terminate(ctx, t)
+	})
+	dbPool := pc.BuildPgxPool(ctx, t)
+
+	migrations := []katapp.DatabaseMigrationConfig{
+		{
+			Service: "fs_service",
+			Schema:  "service1_sample",
+			Path:    "katpg/internal/dbmgr_test/migrations_service1_step1",
+			FS:      os.DirFS(".."),
+		},
+	}
+
+	err := DoMigration(ctx, dbPool, migrations)
+	require.NoError(t, err)
+	err = DoMigration(ctx, dbPool, migrations)
+	require.NoError(t, err)
+
+	var tableExists bool
+	err = dbPool.QueryRow(ctx, `
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'service1_sample' AND table_name = 'contact'
+            )`).Scan(&tableExists)
+	require.NoError(t, err)
+	assert.True(t, tableExists)
 }

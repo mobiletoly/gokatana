@@ -1,15 +1,20 @@
 package katpg
 
 import (
+	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5"
-	"github.com/mobiletoly/gokatana/internal"
-	"github.com/mobiletoly/gokatana/katapp"
-	"golang.org/x/net/context"
+	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/mobiletoly/gokatana/internal"
+	"github.com/mobiletoly/gokatana/katapp"
 )
 
 const migrationTable = "_kat_migration"
@@ -22,19 +27,30 @@ type migrationRecord struct {
 	LatestVersion string    `db:"last_version"`
 }
 
-// DoMigration performs all migrations for the registered configurations.
-func (db *DBLink) DoMigration(ctx context.Context) error {
+type migrationFile struct {
+	name        string
+	displayPath string
+	readPath    string
+	sourceFS    fs.FS
+}
+
+// DoMigration performs all migrations for the provided PostgreSQL pool.
+func DoMigration(ctx context.Context, pgpool *pgxpool.Pool, migrations []katapp.DatabaseMigrationConfig) error {
+	if pgpool == nil {
+		return fmt.Errorf("migration failed: pgpool is nil")
+	}
+
 	mgrTime := time.Now()
-	for _, mgr := range db.cfg.Migrations {
+	for _, mgr := range migrations {
 		logger := katapp.Logger(ctx).WithGroup("katpg.DoMigration").
 			With("service", mgr.Service).
 			With("schema", mgr.Schema)
 		logger.Infof("perform db migration")
-		files, err := internal.ListFilesInDirSortedByFilename(mgr.Path)
+		files, err := listMigrationFiles(mgr)
 		if err != nil {
 			return logger.LogNewError("failed to list migration files in directory %s: %w", mgr.Path, err)
 		}
-		err = pgx.BeginFunc(ctx, db, func(tx pgx.Tx) error {
+		err = pgx.BeginFunc(ctx, pgpool, func(tx pgx.Tx) error {
 			if err := createMigrationTableIfNotExist(ctx, tx, mgr.Schema); err != nil {
 				return err
 			}
@@ -50,25 +66,23 @@ func (db *DBLink) DoMigration(ctx context.Context) error {
 			}
 			var latestVersion string
 			for _, file := range files {
-				_, f := filepath.Split(file)
-				if !validMigrationFilePattern.MatchString(f) {
-					logger.Warnf("skipping incorrectly named migration file: %s", file)
+				if !validMigrationFilePattern.MatchString(file.name) {
+					logger.Warnf("skipping incorrectly named migration file: %s", file.displayPath)
 					continue
 				}
-				// Ensure the file is not already applied
-				if f[:4] <= startFilePrefix {
+				if file.name[:4] <= startFilePrefix {
 					continue
 				}
-				content, err := os.ReadFile(file)
+				content, err := readMigrationFile(file)
 				if err != nil {
-					return logger.LogNewError("failed to read migration file (%s): %w", file, err)
+					return logger.LogNewError("failed to read migration file (%s): %w", file.displayPath, err)
 				}
 				_, err = tx.Exec(ctx, string(content))
 				if err != nil {
-					return logger.LogNewError("failed to execute migration file (%s): %w", file, err)
+					return logger.LogNewError("failed to execute migration file (%s): %w", file.displayPath, err)
 				}
-				logger.Infof("successfully applied migration file: %s", file)
-				latestVersion = f[:4]
+				logger.Infof("successfully applied migration file: %s", file.displayPath)
+				latestVersion = file.name[:4]
 			}
 			if latestVersion != "" {
 				if err := upsertMigrationRecord(ctx, tx, mgr.Schema, mgr.Service, latestVersion, mgrTime); err != nil {
@@ -83,6 +97,17 @@ func (db *DBLink) DoMigration(ctx context.Context) error {
 		logger.InfoContext(ctx, "migration completed", "service", mgr.Service)
 	}
 	return nil
+}
+
+// DoMigration performs all migrations for the registered configurations.
+func (db *DBLink) DoMigration(ctx context.Context) error {
+	if db == nil {
+		return fmt.Errorf("migration failed: db is nil")
+	}
+	if db.cfg == nil {
+		return fmt.Errorf("migration failed: db config is nil")
+	}
+	return DoMigration(ctx, db.Pool, db.cfg.Migrations)
 }
 
 func (db *DBLink) MustDoMigration(ctx context.Context) {
@@ -148,4 +173,52 @@ SET updated_at = $2, last_version = $3
 		return katapp.Logger(ctx).LogNewError("failed to upsert migration record for service=%s: %w", service, err)
 	}
 	return err
+}
+
+func listMigrationFiles(mgr katapp.DatabaseMigrationConfig) ([]migrationFile, error) {
+	if mgr.FS == nil {
+		files, err := internal.ListFilesInDirSortedByFilename(mgr.Path)
+		if err != nil {
+			return nil, err
+		}
+		result := make([]migrationFile, 0, len(files))
+		for _, file := range files {
+			_, name := filepath.Split(file)
+			result = append(result, migrationFile{
+				name:        name,
+				displayPath: file,
+				readPath:    file,
+			})
+		}
+		return result, nil
+	}
+
+	entries, err := fs.ReadDir(mgr.FS, mgr.Path)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name() < entries[j].Name()
+	})
+	result := make([]migrationFile, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		readPath := path.Join(mgr.Path, entry.Name())
+		result = append(result, migrationFile{
+			name:        entry.Name(),
+			displayPath: readPath,
+			readPath:    readPath,
+			sourceFS:    mgr.FS,
+		})
+	}
+	return result, nil
+}
+
+func readMigrationFile(file migrationFile) ([]byte, error) {
+	if file.sourceFS != nil {
+		return fs.ReadFile(file.sourceFS, file.readPath)
+	}
+	return os.ReadFile(file.readPath)
 }
