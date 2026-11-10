@@ -68,7 +68,7 @@ func RunPostgresTestContainer(
 	}
 
 	var err error
-	pc.Container, err = postgres.Run(ctx, "docker.io/postgres:16-alpine", customizer...)
+	pc.Container, err = postgres.Run(ctx, "docker.io/postgres:17.11-alpine", customizer...)
 	if err != nil {
 		t.Fatal(err)
 	}
